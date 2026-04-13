@@ -1,0 +1,14 @@
+High server load caused memory overflow.
+Memory overflow led to process failure.
+Process failure resulted in system crash.
+System crash caused revenue loss.
+
+Heavy rainfall caused flooding.
+Flooding damaged infrastructure.
+Infrastructure damage led to transportation delays.
+Transportation delays affected economic activity.
+
+Climate change caused global warming.
+Global warming led to ice melting.
+Ice melting increased sea levels.
+Rising sea levels caused coastal flooding.

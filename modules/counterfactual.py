@@ -1,6 +1,4 @@
 import networkx as nx
-import os
-import httpx
 
 
 def simulate_counterfactual(graph, removed_node, api_key):
@@ -9,16 +7,14 @@ def simulate_counterfactual(graph, removed_node, api_key):
 
     1. Finds all descendants (effects) and ancestors (causes) of removed_node.
     2. Removes the node from a copy of the graph.
-    3. Identifies effects that are now disconnected from root causes.
-    4. Calls GPT-3.5-turbo for a narrative explanation.
+    3. Identifies effects that are no longer reachable from original roots.
+    4. Builds a deterministic, graph-based explanation.
 
     Returns a dict with:
         removed_node, disconnected_effects, ancestor_nodes,
         modified_graph, llm_explanation, summary
     """
     try:
-        from openai import OpenAI
-
         if removed_node not in graph.nodes():
             return {
                 "removed_node": removed_node,
@@ -39,16 +35,25 @@ def simulate_counterfactual(graph, removed_node, api_key):
         modified_graph = graph.copy()
         modified_graph.remove_node(removed_node)
 
-        # Find which effects are now truly lost (nodes that are NO LONGER reachable 
-        # from ANY root cause in the modified graph)
-        new_root_causes = [n for n in modified_graph.nodes() if modified_graph.in_degree(n) == 0]
-        
-        present_after = set()
-        for r in new_root_causes:
-            present_after.add(r)
-            present_after.update(nx.descendants(modified_graph, r))
-            
-        disconnected_effects = list(descendants_before - present_after)
+        # Keep original roots (excluding removed node). We only count an effect
+        # as "still happening" if it remains reachable from one of these roots.
+        original_roots = [
+            n for n in graph.nodes()
+            if graph.in_degree(n) == 0 and n != removed_node
+        ]
+
+        disconnected_effects = []
+        for node in descendants_before:
+            still_reachable = any(
+                nx.has_path(modified_graph, root, node)
+                for root in original_roots
+                if root in modified_graph
+            )
+            if not still_reachable:
+                disconnected_effects.append(node)
+
+        disconnected_effects = sorted(disconnected_effects)
+        ancestor_nodes = sorted(ancestor_nodes)
 
         # Build summary string
         summary = (
@@ -57,45 +62,28 @@ def simulate_counterfactual(graph, removed_node, api_key):
             f"It was preceded by {len(ancestor_nodes)} cause(s)."
         )
 
-        # Call GPT for explanation
-        # Force-clear proxy environment variables to fix environment-specific library conflicts
-        os.environ.pop("HTTP_PROXY", None)
-        os.environ.pop("HTTPS_PROXY", None)
-        os.environ.pop("http_proxy", None)
-        os.environ.pop("https_proxy", None)
-        
-        from openai import OpenAI
-        # Use Groq endpoint for fast, free inference
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1",
-            http_client=httpx.Client()
-        ) 
-        gpt_response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are an expert in causal reasoning and counterfactual analysis. "
-                        "Give clear, logical explanations."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"In a causal chain, if '{removed_node}' never happened, what would be "
-                        f"the alternate reality? The following effects would not occur: "
-                        f"{disconnected_effects}. The following causes led to it: {ancestor_nodes}. "
-                        f"Explain the alternate scenario in exactly 4 sentences. Be specific and logical."
-                    ),
-                },
-            ],
-            temperature=0.7,
-            max_tokens=300,
-        )
+        # Deterministic explanation, strictly based on graph structure.
+        if disconnected_effects:
+            effects_text = ", ".join(disconnected_effects)
+            llm_explanation = (
+                f"Removing '{removed_node}' breaks causal reachability to: {effects_text}. "
+                "These events become unreachable from the original root causes in the graph."
+            )
+        else:
+            llm_explanation = (
+                f"Removing '{removed_node}' does not disconnect any downstream nodes from "
+                "the remaining original root causes in the graph."
+            )
 
-        llm_explanation = gpt_response.choices[0].message.content.strip()
+        if ancestor_nodes:
+            llm_explanation += (
+                f" Upstream causes of '{removed_node}' in the original graph are: "
+                f"{', '.join(ancestor_nodes)}."
+            )
+        else:
+            llm_explanation += (
+                f" '{removed_node}' is a root cause in the original graph (no ancestors)."
+            )
 
         return {
             "removed_node": removed_node,
@@ -104,6 +92,7 @@ def simulate_counterfactual(graph, removed_node, api_key):
             "modified_graph": modified_graph,
             "llm_explanation": llm_explanation,
             "summary": summary,
+            "used_original_roots": original_roots,
         }
 
     except Exception as e:

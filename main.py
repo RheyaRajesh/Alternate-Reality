@@ -4,7 +4,6 @@ A Causal RAG System for Counterfactual Reasoning
 """
 
 import streamlit as st
-import os
 import json
 import time
 
@@ -367,93 +366,22 @@ tab1, tab2, tab3, tab4 = st.tabs(
 with tab1:
     st.markdown("## Upload Your Knowledge Base")
 
-    col_left, col_right = st.columns(2)
-
     # ── Left: Upload file ──
-    with col_left:
-        st.subheader("📤 Upload Text File")
-        uploaded_file = st.file_uploader(
-            "Choose a .txt file",
-            type=["txt"],
-            label_visibility="collapsed",
-        )
+    st.subheader("📤 Upload Text File")
+    uploaded_file = st.file_uploader(
+        "Choose a .txt file",
+        type=["txt"],
+        label_visibility="collapsed",
+    )
 
-        if uploaded_file is not None:
-            file_content = uploaded_file.read().decode("utf-8")
+    if uploaded_file is not None:
+        file_content = uploaded_file.read().decode("utf-8")
 
-            with st.expander("📄 File Preview (first 500 chars)"):
-                st.text(file_content[:500] + ("..." if len(file_content) > 500 else ""))
+        with st.expander("📄 File Preview (first 500 chars)"):
+            st.text(file_content[:500] + ("..." if len(file_content) > 500 else ""))
 
-            if st.button("💾 Store in Knowledge Base", key="btn_store_upload"):
-                try:
-                    with st.spinner("Initializing database..."):
-                        collection = initialize_chromadb()
-                        if collection is None:
-                            st.markdown(
-                                "<div class='are-error'>❌ Database error. Please reload the page.</div>",
-                                unsafe_allow_html=True,
-                            )
-                            st.stop()
-                        st.session_state.collection = collection
-
-                    with st.spinner("Processing and embedding text..."):
-                        n_chunks = embed_and_store(
-                            file_content, collection, source_name="uploaded_doc"
-                        )
-
-                    st.markdown(
-                        f"<div class='are-success'>✅ Stored {n_chunks} chunk(s) in the knowledge base.</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.session_state.data_loaded = True
-
-                except Exception as e:
-                    st.markdown(
-                        f"<div class='are-error'>❌ Error: {e}</div>",
-                        unsafe_allow_html=True,
-                    )
-
-    # ── Right: Sample data ──
-    with col_right:
-        st.subheader("📝 Use Sample Data")
-        st.markdown(
-            "<div class='are-card'>"
-            "📌 The sample dataset contains two causal chains:<br>"
-            "<b>1.</b> Server crash → system failure → revenue loss<br>"
-            "<b>2.</b> Climate change → ice melt → economic decline"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        if st.button("⚡ Load Sample Data", key="btn_sample"):
+        if st.button("💾 Store in Knowledge Base", key="btn_store_upload"):
             try:
-                # Try to read the sample_data.txt file
-                sample_file_path = os.path.join(os.path.dirname(__file__), "sample_data.txt")
-                try:
-                    with open(sample_file_path, "r", encoding="utf-8") as f:
-                        sample_text = f.read()
-                except FileNotFoundError:
-                    # Hardcoded fallback
-                    sample_text = (
-                        "The server experienced extremely high traffic load during peak hours. "
-                        "The high traffic load caused the CPU utilization to reach 100 percent. "
-                        "When CPU utilization reached maximum capacity, the memory management system "
-                        "became overwhelmed. The overwhelmed memory management system led to a memory "
-                        "overflow error. The memory overflow error caused multiple running processes to "
-                        "fail simultaneously. When processes failed, the operating system lost stability. "
-                        "The unstable operating system triggered a complete system crash. The system crash "
-                        "resulted in data loss and service unavailability. Service unavailability caused "
-                        "customer complaints to increase significantly. The increase in customer complaints "
-                        "led to revenue loss for the company.\n\n"
-                        "The climate change phenomenon is caused by excessive greenhouse gas emissions. "
-                        "Greenhouse gas emissions trap heat in the atmosphere. Trapped heat causes global "
-                        "temperatures to rise. Rising temperatures lead to polar ice caps melting. Melting "
-                        "ice caps cause sea levels to rise. Rising sea levels result in coastal flooding. "
-                        "Coastal flooding forces populations to migrate inland. Mass migration causes resource "
-                        "scarcity in inland regions. Resource scarcity leads to political instability. "
-                        "Political instability results in economic decline."
-                    )
-
                 with st.spinner("Initializing database..."):
                     collection = initialize_chromadb()
                     if collection is None:
@@ -464,18 +392,18 @@ with tab1:
                         st.stop()
                     st.session_state.collection = collection
 
-                with st.spinner("Processing and embedding sample data..."):
-                    n_chunks = embed_and_store(sample_text, collection, source_name="sample_data")
+                with st.spinner("Processing and embedding text..."):
+                    n_chunks = embed_and_store(file_content, collection, source_name="uploaded_doc")
 
                 st.markdown(
-                    f"<div class='are-success'>✅ Sample data loaded! {n_chunks} chunk(s) stored.</div>",
+                    f"<div class='are-success'>✅ Stored {n_chunks} chunk(s) in the knowledge base.</div>",
                     unsafe_allow_html=True,
                 )
                 st.session_state.data_loaded = True
 
             except Exception as e:
                 st.markdown(
-                    f"<div class='are-error'>❌ Error loading sample data: {e}</div>",
+                    f"<div class='are-error'>❌ Error: {e}</div>",
                     unsafe_allow_html=True,
                 )
 
@@ -856,12 +784,18 @@ with tab4:
         )
 
         all_nodes = list(graph.nodes())
+        chain_nodes = [
+            node.strip()
+            for node in st.session_state.chain_text.split(" → ")
+            if node.strip()
+        ]
+        selectable_nodes = chain_nodes if chain_nodes else all_nodes
         col_sel, col_ref = st.columns(2)
 
         with col_sel:
             selected_node = st.selectbox(
-                "🎯 Select event to remove:",
-                options=all_nodes,
+                "🎯 Select event to remove (from current displayed chain):",
+                options=selectable_nodes,
                 key="selectbox_node",
             )
 
