@@ -1,38 +1,47 @@
-# Alternate Reality Engine (ARE)
+<h1 align="center"> 🌌 Alternate Reality Engine </h1>
+<p align="center">
+  <b>Causal RAG + Counterfactual Simulation Platform</b>
+</p>
 
-Alternate Reality Engine is a Streamlit app for causal RAG and counterfactual simulation:
 
-- Upload domain text knowledge
-- Extract causal relationships from retrieved context
-- Build and visualize a causal graph
-- Simulate "what-if this event never happened?" scenarios
+Alternate Reality Engine (ARE) is an AI-powered application that goes beyond traditional question answering by enabling **causal reasoning** and **“what-if” scenario simulation**. ARE focuses on understanding the **cause-and-effect relationships** behind events and integrates **Causal Retrieval-Augmented Generation (RAG)** with causal graph modeling to extract meaningful connections from data and represent them as structured knowledge. The system further enables counterfactual analysis, allowing users to explore alternate scenarios by modifying or removing events within the causal chain.
 
-Live app: [alternate-reality-5x7wwldjd3ssmxqykdpleq.streamlit.app](https://alternate-reality-5x7wwldjd3ssmxqykdpleq.streamlit.app/)
 
-## Why deployment showed "Database error"
+## 🚀 Features
 
-Your deployed app failed during the ChromaDB initialization path. Streamlit Cloud environments can be stricter about native/runtime dependencies and package compatibility, so code that works locally may fail there.
+- Upload and analyze domain-specific text data
+- Extract cause-and-effect relationships automatically  
+- Build structured causal graphs from retrieved context  
+- Visualize event dependencies using graph representations  
+- Simulate counterfactual scenarios ("what-if analysis")  
+- Generate human-readable explanations of causal chains  
+- Reduce hallucinations through structured reasoning  
+- Enable explainable and interpretable AI outputs  
 
-This project now uses an **in-memory vector store** instead of ChromaDB, so no external database is required for this app flow.
 
-## Project Structure
+## 🌍 Deployment
 
-- `main.py` - Streamlit UI and pipeline orchestration
-- `modules/ingestion.py` - chunking, embeddings, in-memory retrieval
-- `modules/causal_extraction.py` - LLM-based causal pair extraction
-- `modules/graph_builder.py` - graph construction and visualization
-- `modules/counterfactual.py` - counterfactual reasoning and explanations
+The project is live and accessible here:
 
-## Local Run Instructions
+<p style="font-size:14px;">
+🔗 <b>https://alternate-reality-5x7wwldjd3ssmxqykdpleq.streamlit.app/</b>
+</p>
 
-### 1) Clone and open project
+## 🛠️ Tech Stack
 
-```bash
-git clone <your-repo-url>
-cd "Alternate-Reality"
-```
+| Category              | Technology Used                          |
+|---------------------|------------------------------------------|
+| 💻 Frontend/App     | Streamlit                                |
+| 🧠 NLP Model        | Sentence Transformers (`all-MiniLM-L6-v2`) |
+| 🔍 Retrieval        | RAG (Retrieval-Augmented Generation)     |
+| 🔗 Graph Processing | NetworkX                                 |
+| 📊 Visualization    | Matplotlib                               |
+| ⚡ LLM Integration  | Groq-compatible OpenAI SDK client        |
+| 🗂️ Data Handling    | Text / Knowledge-based datasets          |
 
-### 2) Create and activate a virtual environment
+## 🧑‍💻 Local Setup
+
+### 1) Create and activate a virtual environment
 
 Windows (PowerShell):
 
@@ -48,13 +57,13 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3) Install dependencies
+### 2) Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) Run the Streamlit app
+### 3) Run the Streamlit app
 
 ```bash
 streamlit run main.py
@@ -62,34 +71,15 @@ streamlit run main.py
 
 Then open the local URL shown in terminal (usually `http://localhost:8501`).
 
-## How to Use
+---
 
-1. Enter your Groq API key in the sidebar
-2. Upload a `.txt` file in Step 1
-3. Click **Store in Knowledge Base**
-4. Enter a causal query in Step 2 and click **Analyze Causal Chain**
-5. Explore graph in Step 3 and simulate counterfactuals in Step 4
+## 📸 Interface Preview
 
-## Deploy on Streamlit Community Cloud
+![Dashboard Main](images/1.png)
+![Dashboard Main](images/2.png)
+![Dashboard Main](images/3.png)
+![Dashboard Main](images/4.png)
+![Dashboard Main](images/5.png)
+*(Fig: Causal chains and Counterfactual Reasoning)*
 
-1. Push this repository to GitHub
-2. In Streamlit Cloud, create a new app from this repo
-3. Set:
-   - Main file path: `main.py`
-   - Python version: 3.10+ (recommended 3.10 or 3.11)
-4. Deploy
-
-No database setup is required.
-
-## Troubleshooting
-
-- If model download is slow on first run, wait for initial embedding model load
-- If API calls fail, verify your Groq API key
-- If memory usage is high, use smaller input files (the store is in memory)
-
-## Tech Stack
-
-- Streamlit
-- Sentence Transformers (`all-MiniLM-L6-v2`)
-- NetworkX + Matplotlib
-- Groq-compatible OpenAI SDK client
+---
