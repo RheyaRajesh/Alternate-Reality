@@ -1,33 +1,67 @@
 """
 Module 1: Document Ingestion & RAG
-Handles ChromaDB initialization, text chunking, embedding, and retrieval.
+Handles text chunking, embedding, and in-memory retrieval.
 """
 
 import time
+from functools import lru_cache
+
+import numpy as np
+
+
+@lru_cache(maxsize=1)
+def _get_embedding_model():
+    """Load and cache embedding model once per process."""
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer("all-MiniLM-L6-v2")
+
+
+class InMemoryCollection:
+    """A minimal collection API compatible with the app's usage."""
+
+    def __init__(self):
+        self._items = []
+
+    def add(self, ids, embeddings, documents, metadatas):
+        for idx, embedding, document, metadata in zip(
+            ids, embeddings, documents, metadatas
+        ):
+            self._items.append(
+                {
+                    "id": idx,
+                    "embedding": np.array(embedding, dtype=float),
+                    "document": document,
+                    "metadata": metadata,
+                }
+            )
+
+    def query(self, query_embeddings, n_results=3):
+        if not self._items:
+            return {"documents": [[]]}
+
+        query_vec = np.array(query_embeddings[0], dtype=float)
+        query_norm = np.linalg.norm(query_vec)
+        if query_norm == 0:
+            return {"documents": [[]]}
+
+        scored = []
+        for item in self._items:
+            item_vec = item["embedding"]
+            denom = query_norm * np.linalg.norm(item_vec)
+            similarity = float(np.dot(query_vec, item_vec) / denom) if denom else 0.0
+            scored.append((similarity, item["document"]))
+
+        top_docs = [doc for _, doc in sorted(scored, reverse=True)[:n_results]]
+        return {"documents": [top_docs]}
 
 
 def initialize_chromadb():
     """
-    Initialize an in-memory ChromaDB client and return the collection.
-    Uses in-memory client to avoid file permission errors.
-    Returns the collection or None if error occurs.
+    Initialize an in-memory collection for retrieval.
+    Returns the collection instance.
     """
-    try:
-        import chromadb
-
-        client = chromadb.Client()
-
-        # Try to get existing collection, create if not found
-        try:
-            collection = client.get_collection(name="are_documents")
-        except Exception:
-            collection = client.create_collection(name="are_documents")
-
-        return collection
-
-    except Exception as e:
-        print(f"[ChromaDB] Error initializing: {e}")
-        return None
+    return InMemoryCollection()
 
 
 def chunk_text(text, chunk_size=150, overlap=30):
@@ -61,12 +95,10 @@ def chunk_text(text, chunk_size=150, overlap=30):
 
 def embed_and_store(text, collection, source_name="uploaded_doc"):
     """
-    Embed text chunks using SentenceTransformer and store in ChromaDB.
+    Embed text chunks and store in the in-memory collection.
     Returns the number of chunks stored.
     """
-    from sentence_transformers import SentenceTransformer
-
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = _get_embedding_model()
 
     chunks = chunk_text(text)
     if not chunks:
@@ -114,13 +146,11 @@ def embed_and_store(text, collection, source_name="uploaded_doc"):
 
 def retrieve_relevant_chunks(query, collection, top_k=3):
     """
-    Retrieve the most relevant text chunks from ChromaDB for a given query.
+    Retrieve the most relevant text chunks for a given query.
     Returns a list of relevant text chunk strings.
     """
     try:
-        from sentence_transformers import SentenceTransformer
-
-        model = SentenceTransformer("all-MiniLM-L6-v2")
+        model = _get_embedding_model()
         query_embedding = model.encode(query).tolist()
 
         results = collection.query(

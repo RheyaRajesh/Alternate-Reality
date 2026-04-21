@@ -382,11 +382,11 @@ with tab1:
 
         if st.button("💾 Store in Knowledge Base", key="btn_store_upload"):
             try:
-                with st.spinner("Initializing database..."):
+                with st.spinner("Initializing in-memory knowledge store..."):
                     collection = initialize_chromadb()
                     if collection is None:
                         st.markdown(
-                            "<div class='are-error'>❌ Database error. Please reload the page.</div>",
+                            "<div class='are-error'>❌ Knowledge store error. Please reload the page.</div>",
                             unsafe_allow_html=True,
                         )
                         st.stop()
@@ -475,7 +475,7 @@ with tab2:
 
         if st.session_state.collection is None:
             st.markdown(
-                "<div class='are-error'>❌ Database not initialized. Please load data in Step 1.</div>",
+                "<div class='are-error'>❌ Knowledge store not initialized. Please load data in Step 1.</div>",
                 unsafe_allow_html=True,
             )
             st.stop()
@@ -990,7 +990,7 @@ with fc1:
     )
 with fc2:
     st.markdown(
-        "<p class='are-footer'>Built with Streamlit + OpenAI + ChromaDB</p>",
+        "<p class='are-footer'>Built with Streamlit + Groq + In-memory Vector Store</p>",
         unsafe_allow_html=True,
     )
 with fc3:
